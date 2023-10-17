@@ -12,6 +12,7 @@ import Scratch
 
 export LocalResource
 export Resource
+export ResourceRouter
 export @comptime
 
 abstract type AbstractResource end
