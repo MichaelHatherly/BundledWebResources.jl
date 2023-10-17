@@ -26,7 +26,7 @@ content(r::LocalResource) = read(joinpath(r.root, r.path), String)
 function Base.pathof(r::LocalResource)
     path = join(splitpath(r.path), '/')
     content = read(joinpath(r.root, r.path))
-    hash = HTTP.URIs.escapeuri(Base64.base64encode(Base.hash(content)))
+    hash = string(Base.hash(content); base = 62)
     return "/$path?v=$hash"
 end
 
@@ -76,7 +76,7 @@ content(r::Resource) = r.content
 Base.show(io::IO, r::Resource) = print(io, "Resource($(repr(r.url)), $(repr(r.hash)))")
 
 function Base.pathof(r::Resource)
-    path = join(("resource", HTTP.URIs.escapeuri(Base64.base64encode(hash(r.hash))), r.name), "/")
+    path = join(("resource", string(hash(r.hash); base = 62), r.name), "/")
     return "/$path"
 end
 
