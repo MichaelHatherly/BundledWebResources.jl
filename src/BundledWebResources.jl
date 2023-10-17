@@ -1,6 +1,5 @@
 module BundledWebResources
 
-import Base64
 import Dates
 import Downloads
 import HTTP
