@@ -49,8 +49,10 @@ easy deployment of built artifacts via system images.
 ```julia
 using RelocatableFolders, BundledWebResources
 
+const DIST_DIR = @path joinpath(@__DIR__, "dist")
+
 function resource()
-    return @comptime LocalResource(@path "dist/output.css")
+    return @comptime LocalResource(DIST_DIR, "output.css")
 end
 ```
 
@@ -60,7 +62,9 @@ using a bare `const` would usually be sufficient.
 ```julia
 using RelocatableFolders, BundledWebResources
 
-const CSS_OUTPUT = LocalResource(@path "dist/output.css")
+const DIST_DIR = @path joinpath(@__DIR__, "dist")
+
+const CSS_OUTPUT = LocalResource(DIST_DIR, "output.css")
 ```
 
 ## Resource Router

@@ -30,6 +30,8 @@ end
 
 function _updated_mtimes(current::Dict, mod::Module)
     root, files = Revise.modulefiles(mod)
+    root = @something(root, [])
+    files = @something(files, [])
     non_julia_files = _local_resources(mod)
     mtimes = Dict(file => mtime(file) for file in Set(vcat(root, files, non_julia_files)))
     for (file, mtime) in mtimes
