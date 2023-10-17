@@ -30,7 +30,8 @@ end
 
 function _updated_mtimes(current::Dict, mod::Module)
     root, files = Revise.modulefiles(mod)
-    mtimes = Dict(file => mtime(file) for file in Set(vcat(root, files)))
+    non_julia_files = _local_resources(mod)
+    mtimes = Dict(file => mtime(file) for file in Set(vcat(root, files, non_julia_files)))
     for (file, mtime) in mtimes
         if !haskey(current, file) || current[file] != mtime
             @debug "file change detected" file new_mtime = mtime current_mtime = current[file]
@@ -38,6 +39,24 @@ function _updated_mtimes(current::Dict, mod::Module)
         end
     end
     return false, mtimes
+end
+
+function _local_resources(mod::Module)
+    files = String[]
+    for name in names(mod; all = true)
+        if isdefined(mod, name) && !Base.isdeprecated(mod, name)
+            object = getfield(mod, name)
+            if isa(object, Function)
+                T = Core.Compiler.return_type(object, Tuple{})
+                if T <: BundledWebResources.LocalResource && T !== Union{}
+                    resource = object()
+                    file = joinpath(resource.root, resource.path)
+                    push!(files, file)
+                end
+            end
+        end
+    end
+    return files
 end
 
 end
