@@ -4,7 +4,6 @@ authors = ["Michael Hatherly <michaelhatherly@gmail.com>"]
 version = "0.1.0"
 
 [deps]
-Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
@@ -14,8 +13,17 @@ Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 Scratch = "6c6a2e73-6563-6170-7368-637461726353"
 
-[weakdeps]
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+[compat]
+Downloads = "1"
+HTTP = "1"
+MIMEs = "0.1"
+PackageExtensionCompat = "1"
+Preferences = "1"
+Scratch = "1"
+julia = "1.6"
 
 [extensions]
 BundledWebResourcesReviseExt = "Revise"
+
+[weakdeps]
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
