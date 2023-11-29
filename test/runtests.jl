@@ -93,4 +93,47 @@ end
         res = router(HTTP.Request("GET", "/"))
         @test res.status == 404
     end
+
+    @testset "`bun` artifact" begin
+        if Sys.isapple() || Sys.islinux()
+            bun = BundledWebResources.bun()
+            @test VersionNumber(readchomp(`$bun --version`)) > v"1"
+            mktempdir() do dir
+                cd(dir) do
+                    run(`$bun init -y`)
+                    run(`$bun add react-dom`)
+                    open("Component.tsx", "w") do io
+                        write(
+                            io,
+                            """
+                            export function Component(props: {message: string}) {
+                                return <p>{props.message}</p>
+                            }
+                            """,
+                        )
+                    end
+                    open("index.tsx", "w") do io
+                        write(
+                            io,
+                            """
+                            import * as ReactDOM from 'react-dom/client';
+                            import {Component} from "./Component"
+
+                            const root = ReactDOM.createRoot(document.getElementById('root'));
+                            root.render(<Component message="Sup!" />)
+                            """,
+                        )
+                    end
+                    run(`$bun build ./index.tsx --outdir ./out`)
+
+                    @test isdir("out")
+                    @test isfile(joinpath("out", "index.js"))
+                    @test contains(read(joinpath("out", "index.js"), String), "Sup!")
+                    @test contains(read(joinpath("out", "index.js"), String), "react-dom")
+                end
+            end
+        else
+            @test_throws ErrorException BundledWebResources.bun()
+        end
+    end
 end

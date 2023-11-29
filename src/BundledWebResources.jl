@@ -1,5 +1,6 @@
 module BundledWebResources
 
+import Artifacts
 import Dates
 import Downloads
 import HTTP
@@ -14,8 +15,21 @@ export Resource
 export ResourceRouter
 export @comptime
 
-abstract type AbstractResource end
+# These are the only currently supported platforms for `bun`. We don't have
+# artifacts other platforms so we need to make sure to include the artifact"bun"
+# macro only when on the right platforms otherwise the package would not load.
+@static if Sys.isapple() || Sys.islinux()
+    function bun(; kws...)
+        path = joinpath(Artifacts.artifact"bun", "bun$(Sys.iswindows() ? ".exe" : "")")
+        return Cmd(Cmd([path]); env = copy(ENV), kws...) # Somewhat replicating JLLWrapper behavior.
+    end
+else
+    function bun(; kws...)
+        error("unsupported platform")
+    end
+end
 
+abstract type AbstractResource end
 struct LocalResource{T<:AbstractString} <: AbstractResource
     root::T
     path::String
