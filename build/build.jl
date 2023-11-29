@@ -108,7 +108,7 @@ function create_artifacts(version)
             force = true,
             lazy = false,
             download_info = Tuple[(
-                "https://github.com/MichaelHatherly/BundledWebResources.jl/releases/download/bun-$(URIs.escapeuri("$(version)+$(build)"))/$archive_filename",
+                "https://github.com/MichaelHatherly/BundledWebResources.jl/releases/download/bun-v$(URIs.escapeuri("$(version)+$(build)"))/$archive_filename",
                 download_hash,
             )],
         )
