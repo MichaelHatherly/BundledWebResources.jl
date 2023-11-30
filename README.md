@@ -90,3 +90,17 @@ using HTTP, BundledWebResources
 resource_router = ResourceRouter(MyBundledResources)
 HTTP.serve(endpoint_router |> resource_router, HTTP.Sockets.localhost, 8080)
 ```
+
+## Experimental web resource bundling
+
+*This feature is subject to change.*
+
+Experimental support for bundling web resources is provided via the `bun`
+command-line tool which is provided via the Julia artifacts system and does not
+need to be installed manually. **Note that `bun` does not currently support
+Windows.** The `BundledWebResources.bun` function will throw an error on that
+platform currently.
+
+A `watch` function is provided that can register a callback function to be run
+each time the `bun build` rebuilds the bundled files. This can be used to
+trigger browser reloads or other actions.

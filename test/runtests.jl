@@ -107,7 +107,7 @@ end
                             io,
                             """
                             export function Component(props: {message: string}) {
-                                return <p>{props.message}</p>
+                                return <p class="p-2">{props.message}</p>
                             }
                             """,
                         )
@@ -130,6 +130,79 @@ end
                     @test isfile(joinpath("out", "index.js"))
                     @test contains(read(joinpath("out", "index.js"), String), "Sup!")
                     @test contains(read(joinpath("out", "index.js"), String), "react-dom")
+                    @test contains(read(joinpath("out", "index.js"), String), "p-2")
+
+                    @test !contains(read(joinpath("out", "index.js"), String), "Sup!!!!!")
+                    @test !contains(read(joinpath("out", "index.js"), String), "text-blue-200")
+
+                    has_rebuilt = Ref(0)
+                    function after_rebuild()
+                        has_rebuilt[] += 1
+                    end
+                    watcher = BundledWebResources.watch(;
+                        after_rebuild,
+                        entrypoint = "index.tsx",
+                        outdir = "out",
+                    )
+
+                    @test has_rebuilt[] == 0
+
+                    open("index.tsx", "w") do io
+                        write(
+                            io,
+                            """
+                            import * as ReactDOM from 'react-dom/client';
+                            import {Component} from "./Component"
+
+                            const root = ReactDOM.createRoot(document.getElementById('root'));
+                            root.render(<Component message="Sup!!!!!" />)
+                            """,
+                        )
+                    end
+
+                    sleep(1)
+
+                    @test has_rebuilt[] == 1
+
+                    @test contains(read(joinpath("out", "index.js"), String), "Sup!!!!!")
+                    @test !contains(read(joinpath("out", "index.js"), String), "text-blue-200")
+
+                    open("Component.tsx", "w") do io
+                        write(
+                            io,
+                            """
+                            export function Component(props: {message: string}) {
+                                return <p class="p-2 text-blue-200">{props.message}</p>
+                            }
+                            """,
+                        )
+                    end
+
+                    sleep(1)
+
+                    @test has_rebuilt[] == 2
+                    @test contains(read(joinpath("out", "index.js"), String), "text-blue-200")
+
+                    # Closing the watcher should prevent further rebuilds.
+                    close(watcher)
+
+                    open("Component.tsx", "w") do io
+                        write(
+                            io,
+                            """
+                            export function Component(props: {message: string}) {
+                                return <p class="p-2">{props.message}</p>
+                            }
+                            """,
+                        )
+                    end
+
+                    sleep(1)
+
+                    # We haven't rebuilt since we closed the watcher and the
+                    # built file is still contain the stale class.
+                    @test has_rebuilt[] == 2
+                    @test contains(read(joinpath("out", "index.js"), String), "text-blue-200")
                 end
             end
         else
