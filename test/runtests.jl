@@ -1,5 +1,6 @@
 using BundledWebResources
 using Test
+using Revise
 
 module TestResourceModule
 

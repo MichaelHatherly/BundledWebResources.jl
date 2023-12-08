@@ -14,12 +14,6 @@ Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 Scratch = "6c6a2e73-6563-6170-7368-637461726353"
 
-[weakdeps]
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
-
-[extensions]
-BundledWebResourcesReviseExt = "Revise"
-
 [compat]
 Artifacts = "1.6"
 Dates = "1.6"
@@ -31,3 +25,9 @@ Preferences = "1"
 SHA = "0.7, 1.6"
 Scratch = "1"
 julia = "1.6"
+
+[extensions]
+BundledWebResourcesReviseExt = "Revise"
+
+[weakdeps]
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
