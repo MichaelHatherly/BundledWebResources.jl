@@ -26,6 +26,16 @@ function output_css_resource()
     return @comptime LocalResource(DATA_DIR, "output.css")
 end
 
+if !Sys.iswindows()
+    function bundled_resource()
+        return @comptime LocalResource(
+            DATA_DIR,
+            "bundled.js",
+            BundledWebResources.bun_build("bundled.ts"),
+        )
+    end
+end
+
 end
 @testset "BundledWebResources" begin
     @testset "Resources" begin
@@ -56,6 +66,17 @@ end
 
         @test TestResourceModule.output_css_resource().root == TestResourceModule.DATA_DIR
         @test TestResourceModule.output_css_resource().path == "output.css"
+
+        # Unsupported on Windows currently.
+        if !Sys.iswindows()
+            @test TestResourceModule.bundled_resource().root == TestResourceModule.DATA_DIR
+            @test TestResourceModule.bundled_resource().path == "bundled.js"
+
+            @test contains(
+                BundledWebResources.content(TestResourceModule.bundled_resource()),
+                "console.log(\"test\")",
+            )
+        end
     end
 
     @testset "ResourceRouter" begin
@@ -84,6 +105,15 @@ end
         @test res.status == 200
         @test content_type(res) == "text/javascript; charset=utf-8"
         @test String(res.body) == BundledWebResources.content(TestResourceModule.PLOTLY_RESOURCE)
+
+        # Unsupported on Windows currently.
+        if !Sys.iswindows()
+            res = router(HTTP.Request("GET", pathof(TestResourceModule.bundled_resource())))
+            @test res.status == 200
+            @test content_type(res) == "text/javascript; charset=utf-8"
+            @test String(res.body) ==
+                  BundledWebResources.content(TestResourceModule.bundled_resource())
+        end
 
         res = router(HTTP.Request("GET", pathof(TestResourceModule.OUTPUT_CSS_RESOURCE)))
         @test res.status == 200
