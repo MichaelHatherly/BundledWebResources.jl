@@ -11,16 +11,31 @@ struct LocalResource{T<:AbstractString} <: AbstractResource
     root::T
     path::String
     func::Function
+
+    function LocalResource(
+        root::AbstractString,
+        path::AbstractString,
+        func::Base.Callable = _default_local_resource_func,
+    )
+        isdir(root) || error("'$root' is not a directory.")
+        if func === _default_local_resource_func && !isfile(joinpath(root, path))
+            error("'$path' is not a file.")
+        end
+
+        resource = new{typeof(root)}(root, path, func)
+
+        # Run the transform function once to ensure it works and also populate
+        # cached values if the `func` happens to cache content, for
+        # relatablility.
+        content(resource)
+
+        return resource
+    end
 end
 
-function LocalResource(
-    root::AbstractString,
-    path::AbstractString,
-    func::Base.Callable = _default_local_resource_func,
-)
-    isdir(root) || error("'$root' is not a directory.")
-    isfile(joinpath(root, path)) || error("'$path' is not a file.")
-    return LocalResource(root, path, func)
+function Base.show(io::IO, r::LocalResource)
+    transformed = r.func !== _default_local_resource_func
+    print(io, "$(LocalResource)($(repr(r.root)), $(repr(r.path)); transformed=$transformed)")
 end
 
 function _default_local_resource_func(root::AbstractString, path::AbstractString)
@@ -47,9 +62,17 @@ TypeScript, not JavaScript, then specify `source` as the `.ts` file.
 function bun_build(source::Union{AbstractString,Nothing} = nothing)
     cache = Ref("")
     function bun_builder(root::AbstractString, path::AbstractString)
-        path = something(source, path)
-        if isfile(joinpath(root, path))
-            cache[] = readchomp(`$(bun(; dir = root)) build $(path)`)
+        if isdir(root)
+            path = something(source, path)
+            if isfile(joinpath(root, path))
+                cache[] = readchomp(`$(bun(; dir = root)) build $(path)`)
+            else
+                @warn "no file found at $(joinpath(root, path)) for `bun_build`."
+            end
+        else
+            if isempty(cache[])
+                @warn "no directory found at $(root) for `bun_build` and cache is empty."
+            end
         end
         return cache[]
     end
