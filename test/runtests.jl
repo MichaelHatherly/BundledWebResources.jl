@@ -26,7 +26,7 @@ function output_css_resource()
     return @comptime LocalResource(DATA_DIR, "output.css")
 end
 
-if !Sys.iswindows()
+@static if !Sys.iswindows()
     function bundled_resource()
         return @comptime LocalResource(
             DATA_DIR,
