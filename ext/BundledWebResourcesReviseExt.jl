@@ -35,7 +35,7 @@ function _updated_mtimes(current::Dict, mod::Module)
     non_julia_files = _local_resources(mod)
     mtimes = Dict(file => mtime(file) for file in Set(vcat(root, files, non_julia_files)))
     for (file, mtime) in mtimes
-        if !haskey(current, file) || current[file] != mtime
+        if !haskey(current, file) || current[file] != mtime || iszero(mtime)
             @debug "file change detected" file new_mtime = mtime current_mtime = current[file]
             return true, mtimes
         end
