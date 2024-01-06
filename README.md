@@ -67,6 +67,51 @@ const DIST_DIR = @path joinpath(@__DIR__, "dist")
 const CSS_OUTPUT = LocalResource(DIST_DIR, "output.css")
 ```
 
+### Resource transformer functions
+
+The `LocalResource` type accepts a third optional argument that is a function
+`(directory, file) -> content` that can be used to generate the content of the
+resource at request time (cached in production use). This can be used to
+generate resources from other resources, such as TypeScript to JavaScript conversion
+using the experimental `bun_build` function.
+
+```julia
+function bundled_resource()
+    return @comptime LocalResource(
+        DATA_DIR,
+        "bundled.js",
+        BundledWebResources.bun_build("bundled.ts"),
+    )
+end
+```
+
+Above `bun_build` returns a closure that will convert `bundled.ts` to `bundled.js`
+using the `bun build` command.
+
+You can use this optional transformer argument to do any kind of custom
+processing of resources you want, even generating completely synthetic resources
+from `String` content.
+
+```julia
+function fake_resource_content(_dir, _file)
+    return """
+    console.log("Hello, world!");
+    """
+end
+
+function fake_resource()
+    return @comptime LocalResource(
+        DATA_DIR,
+        "fake.js",
+        fake_resource_content,
+    )
+end
+```
+
+Note that these resource generating functions are `Revise`-aware and will
+rebuild the resource content when the `String` content changes if you have
+`Revise` loaded and browser hot-reloads enabled using `ReloadableMiddleware`.
+
 ## Resource Router
 
 The main use case of these resources is serving them to clients via an HTTP
@@ -104,3 +149,93 @@ platform currently.
 A `watch` function is provided that can register a callback function to be run
 each time the `bun build` rebuilds the bundled files. This can be used to
 trigger browser reloads or other actions.
+
+## Cookbook
+
+A selection of recipes for common use cases of this package and integrations
+with other complementary packages.
+
+### Font Bundling and Loading
+
+Rather than manually downloading and installing fonts to be served by an
+application (instead of a CDN) you can use `BundledWebResources` to bundle
+fonts into your application and serve them from there.
+
+[Fontsource](https://fontsource.org) is a good source for retrieving fonts from
+for this purpose. Locate a font, or several, for example
+[Inter](https://fontsource.org/fonts/inter). Navigate to the CDN tab and select
+the variants you want to include in your application.
+
+Find the current version of the font (rather than using `latest`, which will
+change over time and void the `sha256` hash). This can be found on the `NPM`
+link on the font page. Also find the URL to use for the font, which will be
+`url()` in the required CSS content. Something like
+`https://cdn.jsdelivr.net/fontsource/fonts/inter:vf@latest/latin-wght-normal.woff2`.
+Switch the `latest` for the version number. E.g.
+`https://cdn.jsdelivr.net/fontsource/fonts/inter:vf@5.0.16/latin-wght-normal.woff2`
+so that the `sha256` hash will be stable.
+
+```julia
+function inter_woff2()
+    return @comptime Resource(
+        "https://cdn.jsdelivr.net/fontsource/fonts/inter:vf@5.0.16/latin-wght-normal.woff2";
+        sha256 = "88df0b5a7bc397dbc13a26bb8b3742cc62cd1c9b0dded57da7832416d6f52f42",
+    )
+end
+```
+
+Create a `LocalResource` for the fontface CSS file. This will be used to load the
+font from the bundled resource.
+
+```julia
+function fontfaces_css_content(_dir, _file)
+    return """
+    /* inter-latin-wght-normal */
+    @font-face {
+      font-family: 'Inter Variable';
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url($(pathof(inter_woff2()))) format('woff2-variations');
+      unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+    }
+    """
+end
+
+function fontfaces_css()
+    return @comptime LocalResource(
+        @__DIR__,
+        "fontfaces.css",
+        fontfaces_css_content,
+    )
+end
+```
+
+And then reference the `fontfaces.css` file in your HTML. Here using
+HypertextTemplates.jl dynamic attribute syntax, `.href=`, to interpolate the
+path to the versioned resource.
+
+```html
+<link rel="stylesheet" .href="$(pathof(fontfaces_css()))" />
+```
+
+Finally, set your font-family to the font name in your CSS.
+
+```css
+body {
+    font-family: "Inter Variable", sans-serif;
+}
+```
+
+If using Tailwind CSS, for example, you can set the `fontFamily` property in
+your `tailwind.config.js` file.
+
+```js
+module.exports = {
+  theme: {
+    fontFamily: {
+      sans: ["Inter Variable", "sans-serif"],
+    },
+  },
+};
+```
