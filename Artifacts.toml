@@ -1,34 +1,34 @@
 [[bun]]
 arch = "aarch64"
-git-tree-sha1 = "6bd364f0dce370c34d5fae565b882358fb6929d6"
+git-tree-sha1 = "6bb798a8e0f73ca643b234f2d69de89633d1e3ce"
 os = "macos"
 
     [[bun.download]]
-    sha256 = "e77e5c98a8becbec30c246ad6257899135f9b32f6ea4bd7f6b1207a57066540b"
-    url = "https://github.com/MichaelHatherly/BundledWebResources.jl/releases/download/bun-v1.0.34%2B0/bun-1.0.34+0-aarch64-apple-darwin14.tar.gz"
+    sha256 = "9c6a431b792a75a90e886e5579f1b8fbdc25baaf0b90552908f05b7649b2b4cb"
+    url = "https://github.com/MichaelHatherly/BundledWebResources.jl/releases/download/bun-v1.1.0%2B0/bun-1.1.0+0-aarch64-apple-darwin14.tar.gz"
 [[bun]]
 arch = "x86_64"
-git-tree-sha1 = "51a2b259122590d19183637e8f479f9876f5e4ec"
+git-tree-sha1 = "e7051cdf15912320728399b8962818426d581c3a"
 os = "macos"
 
     [[bun.download]]
-    sha256 = "435b240f4ad917ddfde72a0f56e3ed2d7e20638b099f361e0dba7a75c9261661"
-    url = "https://github.com/MichaelHatherly/BundledWebResources.jl/releases/download/bun-v1.0.34%2B0/bun-1.0.34+0-x86_64-apple-darwin14.tar.gz"
+    sha256 = "93cc4011e1e6803502bf43a3acc4ad9fb6a0c8c423b9bd9dead6e87763112e75"
+    url = "https://github.com/MichaelHatherly/BundledWebResources.jl/releases/download/bun-v1.1.0%2B0/bun-1.1.0+0-x86_64-apple-darwin14.tar.gz"
 [[bun]]
 arch = "aarch64"
-git-tree-sha1 = "2dfc9a4a80c8530e96bf66be45ac8b897d57557e"
+git-tree-sha1 = "c0a08a4dafdb05fbc7e665400e9c083ffebd1114"
 libc = "glibc"
 os = "linux"
 
     [[bun.download]]
-    sha256 = "bc3d4d3128dd019e4927b1e801c76ca7d214aae62530229cc71bd48b720d72bc"
-    url = "https://github.com/MichaelHatherly/BundledWebResources.jl/releases/download/bun-v1.0.34%2B0/bun-1.0.34+0-aarch64-linux-gnu.tar.gz"
+    sha256 = "9ab4c8d47979310fcb0864228cff02c6f416e73782690e17a93831da4e727104"
+    url = "https://github.com/MichaelHatherly/BundledWebResources.jl/releases/download/bun-v1.1.0%2B0/bun-1.1.0+0-aarch64-linux-gnu.tar.gz"
 [[bun]]
 arch = "x86_64"
-git-tree-sha1 = "d3371e1cb127289904cd82a316524df63c1e9790"
+git-tree-sha1 = "1ec3d61d717c540df5a336e71aaab13776e97887"
 libc = "glibc"
 os = "linux"
 
     [[bun.download]]
-    sha256 = "b5438566c1e375146108bd52769bd8dc1ed159d58213debae923c229bac18bab"
-    url = "https://github.com/MichaelHatherly/BundledWebResources.jl/releases/download/bun-v1.0.34%2B0/bun-1.0.34+0-x86_64-linux-gnu.tar.gz"
+    sha256 = "881d1597e1f97931057cf70727222727b5d0e6aab683e16a391b937d405ed3c3"
+    url = "https://github.com/MichaelHatherly/BundledWebResources.jl/releases/download/bun-v1.1.0%2B0/bun-1.1.0+0-x86_64-linux-gnu.tar.gz"
