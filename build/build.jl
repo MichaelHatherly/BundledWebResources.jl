@@ -4,7 +4,7 @@ import URIs
 import ZipFile
 
 pkgname = "bun"
-build = 1
+build = 0
 bun_repo = "https://github.com/oven-sh/bun"
 
 latest_stable_release = mktempdir() do dir
