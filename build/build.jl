@@ -4,7 +4,7 @@ import URIs
 import ZipFile
 
 pkgname = "bun"
-build = 0
+build = 1
 bun_repo = "https://github.com/oven-sh/bun"
 
 latest_stable_release = mktempdir() do dir
@@ -45,10 +45,8 @@ triplets = [
     "bun-darwin-x64.zip" => Pkg.BinaryPlatforms.MacOS(:x86_64),
     "bun-linux-aarch64.zip" => Pkg.BinaryPlatforms.Linux(:aarch64),
     "bun-linux-x64.zip" => Pkg.BinaryPlatforms.Linux(:x86_64),
-
-    # TODO: bun does not yet support Windows properly.
     # "bun-windows-aarch64.zip" => Pkg.BinaryPlatforms.Windows(:aarch64),
-    # "bun-windows-x64.zip" => Pkg.BinaryPlatforms.Windows(:x86_64),
+    "bun-windows-x64.zip" => Pkg.BinaryPlatforms.Windows(:x86_64),
 ]
 
 function create_artifacts(version)
