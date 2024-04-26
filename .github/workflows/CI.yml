@@ -44,13 +44,20 @@ jobs:
         exclude:
           - version: "1.6"
             os: windows-latest
+          - version: "1.6"
+            os: macOS-latest
+        include:
+          - version: "1.7"
+            os: windows-latest
+          - version: "1.8"
+            os: macOS-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/install-juliaup@v1
         with:
-          version: ${{ matrix.version }}
+          julia-version: "${{ matrix.version }}"
 
       - uses: julia-actions/cache@v1
 
