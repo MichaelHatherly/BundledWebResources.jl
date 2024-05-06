@@ -59,7 +59,7 @@ jobs:
         with:
           julia-version: "${{ matrix.version }}"
 
-      - uses: julia-actions/cache@v1
+      - uses: julia-actions/cache@v2
 
       - uses: julia-actions/julia-buildpkg@v1
 
