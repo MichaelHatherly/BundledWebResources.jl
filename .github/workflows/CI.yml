@@ -57,7 +57,7 @@ jobs:
 
       - uses: julia-actions/install-juliaup@v2
         with:
-          julia-version: "${{ matrix.version }}"
+          channel: "${{ matrix.version }}"
 
       - uses: julia-actions/cache@v2
 
