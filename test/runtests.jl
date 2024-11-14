@@ -12,8 +12,8 @@ const PLOTLY_RESOURCE = Resource(
     sha256 = "bf56aa89e1d4df155b43b9192f2fd85dfb0e6279e05c025e6090d8503d004608",
 )
 
-function plotly_resource()
-    return @comptime Resource(
+@register function plotly_resource()
+    return Resource(
         "https://cdn.jsdelivr.net/npm/plotly.js@2.26.2/dist/plotly.min.js";
         sha256 = "bf56aa89e1d4df155b43b9192f2fd85dfb0e6279e05c025e6090d8503d004608",
     )
@@ -22,16 +22,12 @@ end
 const DATA_DIR = @path joinpath(@__DIR__, "data")
 const OUTPUT_CSS_RESOURCE = LocalResource(DATA_DIR, "output.css")
 
-function output_css_resource()
-    return @comptime LocalResource(DATA_DIR, "output.css")
+@register function output_css_resource()
+    return LocalResource(DATA_DIR, "output.css")
 end
 
-function bundled_resource()
-    return @comptime LocalResource(
-        DATA_DIR,
-        "bundled.js",
-        BundledWebResources.bun_build("bundled.ts"),
-    )
+@register function bundled_resource()
+    return LocalResource(DATA_DIR, "bundled.js", BundledWebResources.bun_build("bundled.ts"))
 end
 
 end
@@ -75,15 +71,14 @@ end
     end
 
     @testset "ResourceRouter" begin
-        resource_router = ResourceRouter(TestResourceModule)
-        @test pathof(TestResourceModule.PLOTLY_RESOURCE) in keys(resource_router.map)
-        @test BundledWebResources.HTTP.URIs.URI(
-            pathof(TestResourceModule.OUTPUT_CSS_RESOURCE),
-        ).path in keys(resource_router.map)
-
         HTTP = BundledWebResources.HTTP
-
-        http_router = HTTP.Router()
+        router = HTTP.Router()
+        HTTP.register!(
+            router,
+            "GET",
+            "/static/**",
+            req -> @ResourceEndpoint(TestResourceModule, req),
+        )
 
         function content_type(req)
             for (k, v) in req.headers
@@ -93,8 +88,6 @@ end
             end
             error("no content type")
         end
-
-        router = http_router |> resource_router
 
         res = router(HTTP.Request("GET", pathof(TestResourceModule.PLOTLY_RESOURCE)))
         @test res.status == 200

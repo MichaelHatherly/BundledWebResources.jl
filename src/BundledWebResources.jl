@@ -7,6 +7,7 @@ import Dates
 import Downloads
 import HTTP
 import MIMEs
+import MacroTools
 import PackageExtensionCompat
 import Preferences
 import SHA
@@ -14,10 +15,10 @@ import Scratch
 
 # Exports:
 
+export @ResourceEndpoint
+export @register
 export LocalResource
 export Resource
-export ResourceRouter
-export @comptime
 
 # Includes:
 
