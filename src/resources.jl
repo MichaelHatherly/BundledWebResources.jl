@@ -1,32 +1,50 @@
 abstract type AbstractResource end
 
 """
-    LocalResource(root::AbstractString, path::AbstractString, [transform::Function])
+    LocalResource(
+        root::AbstractString,
+        path::AbstractString,
+        [transform::Function];
+        [prefix::String = ""],
+        [headers::Vector],
+    )
 
 Define a local resource to be served at the given `path`. Optionally specify a
 `transform` function that takes outputs the contents of `path` as a `String`
 instead; used for resources that need pre-processing, e.g. TypeScript.
+
+`headers` allows for setting the default HTTP response headers that are sent
+with the response to clients. `Cache-Control: max-age=604800, immutable` is the
+default.
+
+`prefix` defines what route prefix the resource is to be served from. This
+defaults to `static`, hence the `@ResourceEndpoint` that provides this resource
+to HTTP clients must be mounted on a route `/static/**`.
 """
 struct LocalResource{T<:AbstractString} <: AbstractResource
     root::T
     path::String
+    prefix::String
     func::Function
+    headers::Vector{Pair{String,String}}
 
     function LocalResource(
         root::AbstractString,
         path::AbstractString,
-        func::Base.Callable = _default_local_resource_func,
+        func::Base.Callable = _default_local_resource_func;
+        prefix::String = "static",
+        headers = ["Cache-Control" => "max-age=604800, immutable"],
     )
         isdir(root) || error("'$root' is not a directory.")
         if func === _default_local_resource_func && !isfile(joinpath(root, path))
             error("'$path' is not a file.")
         end
 
-        resource = new{typeof(root)}(root, path, func)
+        resource = new{typeof(root)}(root, path, prefix, func, headers)
 
         # Run the transform function once to ensure it works and also populate
         # cached values if the `func` happens to cache content, for
-        # relatablility.
+        # relocatablity.
         content(resource)
 
         return resource
@@ -44,11 +62,14 @@ end
 
 content(r::LocalResource) = r.func(r.root, r.path)
 
+headers(r::LocalResource) = _set_headers(r.headers, r.path, content(r))
+
 function Base.pathof(r::LocalResource)
     path = join(splitpath(r.path), '/')
+    prefix = isempty(r.prefix) ? "" : "/$(r.prefix)"
     bytes = Vector{UInt8}(content(r))
     hash = string(Base.hash(bytes); base = 62)
-    return "/$path?v=$hash"
+    return "$prefix/$path?v=$hash"
 end
 
 """
@@ -79,38 +100,38 @@ function bun_build(source::Union{AbstractString,Nothing} = nothing)
 end
 
 """
-    @comptime ex
-
-Evaluate an expression at compile time. This is useful for
-constructing `Resource` objects at compile time, e.g.:
-
-```julia
-my_resource() = @comptime Resource("https://example.com/my_resource.txt"; sha256="...")
-```
-
-while still allowing the value to be "`Revise`-able", since it isn't a global
-constant, and instead is a function return value.
-"""
-macro comptime(ex)
-    Core.eval(__module__, ex)
-end
-
-"""
-    Resource(url::String; name::String, sha256::String)
+    Resource(url::String; name::String, sha256::String, headers::Vector, prefix::String)
 
 A remote resource that is downloaded and cached locally.
+
+`headers` allows for setting the default HTTP response headers that are sent
+with the response to clients. `Cache-Control: max-age=604800, immutable` is the
+default.
+
+`prefix` defines what route prefix the resource is to be served from. This
+defaults to `static`, hence the `@ResourceEndpoint` that provides this resource
+to HTTP clients must be mounted on a route `/static/**`.
 """
 struct Resource <: AbstractResource
     name::String
+    prefix::String
     url::String
     content::String
     hash::String
+    headers::Vector{Pair{String,String}}
 
-    function Resource(url::String; name::String = basename(url), sha256::String = "")
+    function Resource(
+        url::String;
+        prefix::String = "static",
+        name::String = basename(url),
+        sha256::String = "",
+        headers = ["Cache-Control" => "max-age=604800, immutable"],
+    )
         computed_sha256 = _download_and_cache(url, sha256)
         if sha256 == computed_sha256
             content = read(joinpath(_SCRATCHSPACE[], sha256), String)
-            return new(name, url, content, sha256)
+            headers = _set_headers(headers, name, content)
+            return new(name, prefix, url, content, sha256, headers)
         else
             error(
                 "SHA256 mismatch for $(repr(url)): expected $(repr(sha256)), got $(repr(computed_sha256)).",
@@ -119,62 +140,161 @@ struct Resource <: AbstractResource
     end
 end
 
+# Add the `Content-Type` header based on the filename and content of the file.
+function _set_headers(headers::Vector, name::String, content::String)
+    headers = copy(headers)
+    has_content_type = false
+    for (k, _) in headers
+        if k == "Content-Type"
+            # Use whatever the user has set.
+            has_content_type = true
+        end
+    end
+    if !has_content_type
+        ct = _content_type_from_path(name)
+        ct = isnothing(ct) ? HTTP.sniff(content) : ct
+        push!(headers, "Content-Type" => ct)
+    end
+
+    push!(headers, "Content-Length" => "$(sizeof(content))")
+
+    return headers
+end
+
+_content_type_from_path(path::AbstractString) = _content_type_from_path(MIMEs.mime_from_path(path))
+_content_type_from_path(mime::MIME) = MIMEs.contenttype_from_mime(mime)
+_content_type_from_path(::Nothing) = nothing
+
 content(r::Resource) = r.content
+
+headers(r::Resource) = r.headers
 
 Base.show(io::IO, r::Resource) = print(io, "Resource($(repr(r.url)), $(repr(r.hash)))")
 
 function Base.pathof(r::Resource)
-    path = join(("resource", string(hash(r.hash); base = 62), r.name), "/")
+    path = join((r.prefix, string(hash(r.hash); base = 62), r.name), "/")
     return "/$path"
 end
 
-"""
-    ResourceRouter(mod::Module)
-    
-A middleware that serves resources defined in `mod` at the paths returned by
-`pathof` for each resource.
-"""
-ResourceRouter(mod::Module) = _resource_router(mod)
+struct ResourceEndpoint
+    mod::Module
+    map::Dict{String,HTTP.Response}
+    mtimes::Dict{String,Float64}
 
-function _resource_router(mod)
-    map = _resource_map(mod)
-    return function (handler)
-        return function (req::HTTP.Request)
-            return _resource_request_handler(map, handler, req)
-        end
+    function ResourceEndpoint(mod::Module)
+        _, mtimes = _updated_mtimes(Dict{String,Float64}(), mod, nothing)
+        map = _map_responses(_resource_map(mod))
+        return new(mod, map, mtimes)
     end
 end
 
-function _resource_request_handler(map, handler, req)
-    uri = HTTP.URIs.URI(req.target)
-    path = uri.path
-    if req.method == "GET" && haskey(map, path)
-        content_type, body = map[path]
-        return HTTP.Response(200, ["Content-Type" => content_type], body)
+_updated_mtimes(current::Dict, ::Module, ::Any) = false, current
+
+_map_responses(map) = Dict(p => HTTP.Response(200, headers, body) for (p, (headers, body)) in map)
+
+Base.show(io::IO, re::ResourceEndpoint) = print(io, "$(ResourceEndpoint)($(re.mod))")
+
+"""
+    @ResourceEndpoint(mod, req)
+
+Return an `HTTP.Response` containing the requested resource from the module `mod`.
+This macro should be used within an `HTTP` handler function such as:
+
+```julia
+module Resources
+# ...
+end
+
+HTTP.register!(rotuer, "GET", "/static/**", (req) -> @ResourceEndpoint(Resources, req))
+```
+
+`/static/**` should be used since all resources are, by default, served from a
+`static` prefix. If you manually set the `prefix` for your defined resources
+then change the registered route to match that new prefix.
+"""
+macro ResourceEndpoint(mod, req)
+    re = ResourceEndpoint(getfield(__module__, mod)::Module)
+    return :($(_get_response)($(re), $(esc(req))))
+end
+
+function _get_response(re::ResourceEndpoint, req::HTTP.Request)
+    if req.method == "GET"
+        uri = HTTP.URIs.URI(req.target)
+        changed, new_mtimes = _updated_mtimes(re.mtimes, re.mod, nothing)
+        if changed
+            empty!(re.mtimes)
+            merge!(re.mtimes, new_mtimes)
+            @debug "file changes detected, reloading resource map."
+            empty!(re.map)
+            merge!(re.map, _map_responses(_resource_map(re.mod)))
+            @debug "reloaded resource map." map = keys(re.map)
+        end
+        return get(() -> HTTP.Response(404), re.map, uri.path)
     else
-        return handler(req)
+        return HTTP.Response(404)
     end
 end
 
 function _resource_map(mod::Module)
-    map = Dict{String,Tuple{String,String}}()
-    for name in names(mod; all = true)
-        if isdefined(mod, name) && !Base.isdeprecated(mod, name)
-            object = getfield(mod, name)
-            if isa(object, Function)
-                T = Core.Compiler.return_type(object, Tuple{})
-                if T <: AbstractResource && T !== Union{}
-                    resource = object()
-                    path = pathof(resource)
-                    uri = HTTP.URIs.URI(path)
-                    mime = MIMEs.mime_from_path(uri.path)
-                    content_type = MIMEs.contenttype_from_mime(mime)
-                    map[uri.path] = (content_type, content(resource))
+    map = Dict{String,Tuple{Vector{Pair{String,String}},String}}()
+    wrapper_name = wrapper_type_name()
+    if isdefined(mod, wrapper_name)
+        wrapper = getfield(mod, wrapper_name)
+        for name in names(mod; all = true)
+            if isdefined(mod, name) && !Base.isdeprecated(mod, name)
+                if is_resource(wrapper{name}())
+                    object = getfield(mod, name)
+                    if isa(object, Function)
+                        resource = object()
+                        path = pathof(resource)
+                        uri = HTTP.URIs.URI(path)
+                        map[uri.path] = (headers(resource), content(resource))
+                    end
                 end
             end
         end
     end
     return map
+end
+
+wrapper_type_name() = Symbol("##$(@__MODULE__).wrapper_type_name##")
+is_resource(f) = false
+
+"""
+    @register name() = Resource(...)
+
+Mark a function as a provider of a `Resource`, or `LocalResource`. This is used
+by `@ResourceEndpoint` to return the correct resource for requests.
+"""
+macro register(resource)
+    if MacroTools.@capture(resource, (name_() = body__) | function name_()
+        body__
+    end)
+        ename = esc(name)
+        tname = wrapper_type_name()
+        etname = esc(tname)
+        return quote
+            isdefined($(__module__), $(esc(QuoteNode(tname)))) || struct $(etname){T} end
+
+            # Lift the resource defintion to top-level. Avoids recreating on
+            # each request. `body` might contain a `return`, hence we must run
+            # the `body` expression in a function def rather than just splicing
+            # it into the toplevel.
+            let resource = (() -> ($(esc.(body)...)))()
+                global function $(ename)()
+                    return resource
+                end
+            end
+
+            Core.@__doc__ $(ename)
+
+            $(@__MODULE__).is_resource(::$(etname){$(esc(QuoteNode(name)))}) = true
+
+            $(ename)
+        end
+    else
+        error("invalid `@register` macro call, must be a function definition with 0 arguments.")
+    end
 end
 
 function _download_and_cache(url::String, sha256::String)

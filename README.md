@@ -9,35 +9,36 @@ served from a single server rather than from multiple third-party sources.
 ## `Resource`s
 
 ```julia
+module MyResources
+
 using BundledWebResources
 
-const RESOURCE = Resource(
+@register plotly_js() = Resource(
     "https://cdn.jsdelivr.net/npm/plotly.js@2.26.2/dist/plotly.min.js";
     sha256 = "bf56aa89e1d4df155b43b9192f2fd85dfb0e6279e05c025e6090d8503d004608",
 )
+
+# ...
+
+end
 ```
 
 You must provide a SHA256 hash of the expected content to ensure resource
 integrity of the included files. Verify the validity of the hash before
 including it in any deployments.
 
-If you want to be able to `Revise` that value without running into redefinition errors
-then use the `@comptime` macro can help out with that.
+Above we define a `Resource` called `plotly_js` that provides a specific
+version of the PlotlyJS library. All resources should be defined within a
+module that is solely for housing resources. Each resource returning function
+must be marked with the `@register` macro, which allows the package to detect
+which functions provide resources when serving them to HTTP clients. Resource
+functions marked with `@register` should always just define and return a
+`Resource` or `LocalResource` and should not perform any dynamic computation to
+define the resource parameters, since the function body is only evaluated once
+at toplevel and then spliced into the function body. Use a transformer function
+with a `LocalResource` if you need to perform dynamic content generation.
 
-```julia
-using BundledWebResources
-
-function resource()
-    return @comptime Resource(
-        "https://cdn.jsdelivr.net/npm/plotly.js@2.26.2/dist/plotly.min.js";
-        sha256 = "bf56aa89e1d4df155b43b9192f2fd85dfb0e6279e05c025e6090d8503d004608",
-    )
-end
-```
-
-This will evaluate the `Resource` at compile-time such that the content of the
-remote resource will be embedded in system images to avoid returning deployed
-code to download the resource on initial startup.
+See the `?Resource` docstring for further details of the API it provides.
 
 ## `LocalResource`s
 
@@ -51,21 +52,12 @@ using RelocatableFolders, BundledWebResources
 
 const DIST_DIR = @path joinpath(@__DIR__, "dist")
 
-function resource()
-    return @comptime LocalResource(DIST_DIR, "output.css")
+@register function resource()
+    return LocalResource(DIST_DIR, "output.css")
 end
 ```
 
-Again using the `@comptime` macro to allow for redefinition if required. Though
-using a bare `const` would usually be sufficient.
-
-```julia
-using RelocatableFolders, BundledWebResources
-
-const DIST_DIR = @path joinpath(@__DIR__, "dist")
-
-const CSS_OUTPUT = LocalResource(DIST_DIR, "output.css")
-```
+See the `?LocalResource` docstring for further details of the API it provides.
 
 ### Resource transformer functions
 
@@ -76,8 +68,8 @@ generate resources from other resources, such as TypeScript to JavaScript conver
 using the experimental `bun_build` function.
 
 ```julia
-function bundled_resource()
-    return @comptime LocalResource(
+@register function bundled_resource()
+    return LocalResource(
         DATA_DIR,
         "bundled.js",
         BundledWebResources.bun_build("bundled.ts"),
@@ -99,8 +91,8 @@ function fake_resource_content(_dir, _file)
     """
 end
 
-function fake_resource()
-    return @comptime LocalResource(
+@register function fake_resource()
+    return LocalResource(
         DATA_DIR,
         "fake.js",
         fake_resource_content,
@@ -112,14 +104,12 @@ Note that these resource generating functions are `Revise`-aware and will
 rebuild the resource content when the `String` content changes if you have
 `Revise` loaded and browser hot-reloads enabled using `ReloadableMiddleware`.
 
-## Resource Router
+## `@ResourceEndpoint`
 
 The main use case of these resources is serving them to clients via an HTTP
-server. A `ResourceRouter(mod::Module)` function is exported for this use. You
-can define a router for all resources defined in a `Module` that can be used in
-an `HTTP.jl` server. When `Revise` is loaded these resources will "live
-updated", otherwise they'll remain as static content in production builds that
-don't include `Revise`.
+server. The `@ResourceEndpoint` is used to serve bundled resources to clients.
+When `Revise` is loaded these resources will "live updated", otherwise they'll
+remain as static content in production builds that don't include `Revise`.
 
 ```julia
 module MyBundledResources
@@ -132,9 +122,22 @@ end
 
 using HTTP, BundledWebResources
 
-resource_router = ResourceRouter(MyBundledResources)
-HTTP.serve(endpoint_router |> resource_router, HTTP.Sockets.localhost, 8080)
+function static_resources(req::HTTP.Request)
+    return @ResourceEndpoint(MyBundledResources, req)
+end
+
+router = HTTP.Router()
+
+HTTP.register!(router, "GET", "/static/**", static_resources)
+
+HTTP.serve(router, HTTP.Sockets.localhost, 8080)
 ```
+
+By default all resources are prefixed with `static` in their path. Hence the
+use of `/static/**` to serve them from the right route. If resources have the
+prefix overridden via the `prefix` keyword then the registered route should be
+changed to match this otherwise 404 responses will be returned due to not being
+able to find them.
 
 ## Experimental web resource bundling
 
@@ -142,9 +145,8 @@ HTTP.serve(endpoint_router |> resource_router, HTTP.Sockets.localhost, 8080)
 
 Experimental support for bundling web resources is provided via the `bun`
 command-line tool which is provided via the Julia artifacts system and does not
-need to be installed manually. **Note that `bun` does not currently support
-Windows.** The `BundledWebResources.bun` function will throw an error on that
-platform currently.
+need to be installed manually. The `BundledWebResources.bun` function will
+throw an error on that platform currently.
 
 A `watch` function is provided that can register a callback function to be run
 each time the `bun build` rebuilds the bundled files. This can be used to
@@ -176,8 +178,8 @@ Switch the `latest` for the version number. E.g.
 so that the `sha256` hash will be stable.
 
 ```julia
-function inter_woff2()
-    return @comptime Resource(
+@register function inter_woff2()
+    return Resource(
         "https://cdn.jsdelivr.net/fontsource/fonts/inter:vf@5.0.16/latin-wght-normal.woff2";
         sha256 = "88df0b5a7bc397dbc13a26bb8b3742cc62cd1c9b0dded57da7832416d6f52f42",
     )
@@ -202,8 +204,8 @@ function fontfaces_css_content(_dir, _file)
     """
 end
 
-function fontfaces_css()
-    return @comptime LocalResource(
+@register function fontfaces_css()
+    return LocalResource(
         @__DIR__,
         "fontfaces.css",
         fontfaces_css_content,
@@ -212,11 +214,10 @@ end
 ```
 
 And then reference the `fontfaces.css` file in your HTML. Here using
-HypertextTemplates.jl dynamic attribute syntax, `.href=`, to interpolate the
-path to the versioned resource.
+`HypertextTemplates.jl`:
 
-```html
-<link rel="stylesheet" .href="$(pathof(fontfaces_css()))" />
+```julia
+@link {rel="stylesheet", href=pathof(fontfaces_css())}
 ```
 
 Finally, set your font-family to the font name in your CSS.

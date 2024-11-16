@@ -1,34 +1,9 @@
 module BundledWebResourcesReviseExt
 
 import BundledWebResources
-import HTTP
 import Revise
 
-function BundledWebResources._resource_router(mod::Module)
-    _, mtimes = _updated_mtimes(Dict(), mod)
-    map = BundledWebResources._resource_map(mod)
-    return function (handler)
-        return function (req::HTTP.Request)
-            changed, new_mtimes = _updated_mtimes(mtimes, mod)
-            if changed
-                empty!(mtimes)
-                merge!(mtimes, new_mtimes)
-                @debug "file changes detected, reloading resource map"
-                empty!(map)
-                merge!(map, Base.invokelatest(BundledWebResources._resource_map, mod))
-                @debug "reloaded resource map" map
-            end
-            return Base.invokelatest(
-                BundledWebResources._resource_request_handler,
-                map,
-                handler,
-                req,
-            )
-        end
-    end
-end
-
-function _updated_mtimes(current::Dict, mod::Module)
+function BundledWebResources._updated_mtimes(current::Dict, mod::Module, ::Nothing)
     root, files = Revise.modulefiles(mod)
     root = something(root, [])
     files = something(files, [])
@@ -45,15 +20,20 @@ end
 
 function _local_resources(mod::Module)
     files = String[]
-    for name in names(mod; all = true)
-        if isdefined(mod, name) && !Base.isdeprecated(mod, name)
-            object = getfield(mod, name)
-            if isa(object, Function)
-                T = Core.Compiler.return_type(object, Tuple{})
-                if T <: BundledWebResources.LocalResource && T !== Union{}
-                    resource = object()
-                    file = joinpath(resource.root, resource.path)
-                    push!(files, file)
+    wrapper_name = BundledWebResources.wrapper_type_name()
+    if isdefined(mod, wrapper_name)
+        wrapper = getfield(mod, wrapper_name)
+        for name in names(mod; all = true)
+            if isdefined(mod, name) && !Base.isdeprecated(mod, name)
+                if BundledWebResources.is_resource(wrapper{name}())
+                    object = getfield(mod, name)
+                    if isa(object, Function)
+                        resource = object()
+                        if isa(resource, BundledWebResources.LocalResource)
+                            file = joinpath(resource.root, resource.path)
+                            push!(files, file)
+                        end
+                    end
                 end
             end
         end
