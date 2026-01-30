@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Reduce GC logging verbosity during init [#60]
+
 ## [v2.0.0] - 2024-11-16
 
 ### Changed
