@@ -350,16 +350,16 @@ function _gc_cached_downloads!()
             gc_interval_period = units[gc_interval_unit](gc_interval_int)
 
             if (last_gc + gc_interval_period) < Dates.now()
-                @info "Garbage collecting cached downloads. You can adjust the frequency of this operation by setting the 'gc_interval' ($(gc_interval_int)) and 'gc_interval_unit' ($(gc_interval_unit)) preferences."
+                @debug "Garbage collecting cached downloads. You can adjust the frequency of this operation by setting the 'gc_interval' ($(gc_interval_int)) and 'gc_interval_unit' ($(gc_interval_unit)) preferences."
                 files = readdir(_SCRATCHSPACE[]; join = true)
                 if length(files) > 1
                     for file in readdir(_SCRATCHSPACE[]; join = true)
                         rm(joinpath(_SCRATCHSPACE[], file))
                     end
-                    @info "Garbage collection complete. $(length(files) - 1) files removed."
+                    @debug "Garbage collection complete. $(length(files) - 1) files removed."
                     write(last_gc_file, string(Dates.now()))
                 else
-                    @info "No files to garbage collect."
+                    @debug "No files to garbage collect."
                 end
             end
         end
