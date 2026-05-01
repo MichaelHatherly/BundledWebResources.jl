@@ -59,7 +59,7 @@ jobs:
         with:
           channel: "${{ matrix.version }}"
 
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
 
       - uses: julia-actions/julia-buildpkg@v1
 
