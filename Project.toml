@@ -1,7 +1,7 @@
 name = "BundledWebResources"
 uuid = "56c11eb9-1257-4f49-abe4-0ac93e2bfd0a"
-authors = ["Michael Hatherly <michaelhatherly@gmail.com>"]
 version = "2.0.1"
+authors = ["Michael Hatherly <michaelhatherly@gmail.com>"]
 
 [deps]
 Artifacts = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -26,7 +26,7 @@ Artifacts = "1.6"
 Dates = "1.6"
 Downloads = "1"
 HTTP = "1"
-MIMEs = "0.1"
+MIMEs = "0.1, 1"
 MacroTools = "0.5"
 PackageExtensionCompat = "1"
 Preferences = "1"
