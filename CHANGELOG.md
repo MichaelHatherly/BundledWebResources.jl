@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [v2.0.2] - 2026-05-29
+
+### Changed
+
+- Allow HTTP v2 [#67]
+
 ## [v2.0.1] - 2026-01-30
 
 ### Changed
@@ -140,6 +146,8 @@ Initial release.
 [v1.3.2]: https://github.com/MichaelHatherly/BundledWebResources.jl/releases/tag/v1.3.2
 [v1.3.3]: https://github.com/MichaelHatherly/BundledWebResources.jl/releases/tag/v1.3.3
 [v2.0.0]: https://github.com/MichaelHatherly/BundledWebResources.jl/releases/tag/v2.0.0
+[v2.0.1]: https://github.com/MichaelHatherly/BundledWebResources.jl/releases/tag/v2.0.1
+[v2.0.2]: https://github.com/MichaelHatherly/BundledWebResources.jl/releases/tag/v2.0.2
 [#9]: https://github.com/MichaelHatherly/BundledWebResources.jl/issues/9
 [#11]: https://github.com/MichaelHatherly/BundledWebResources.jl/issues/11
 [#12]: https://github.com/MichaelHatherly/BundledWebResources.jl/issues/12
@@ -163,3 +171,4 @@ Initial release.
 [#51]: https://github.com/MichaelHatherly/BundledWebResources.jl/issues/51
 [#52]: https://github.com/MichaelHatherly/BundledWebResources.jl/issues/52
 [#54]: https://github.com/MichaelHatherly/BundledWebResources.jl/issues/54
+[#67]: https://github.com/MichaelHatherly/BundledWebResources.jl/issues/67

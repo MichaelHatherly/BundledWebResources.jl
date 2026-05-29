@@ -1,6 +1,6 @@
 name = "BundledWebResources"
 uuid = "56c11eb9-1257-4f49-abe4-0ac93e2bfd0a"
-version = "2.0.1"
+version = "2.0.2"
 authors = ["Michael Hatherly <michaelhatherly@gmail.com>"]
 
 [deps]
