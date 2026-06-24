@@ -53,7 +53,7 @@ jobs:
             os: macOS-latest
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: julia-actions/install-juliaup@05d98a2ef433ca0723a8221e38c4723ea92b0c5f # v3.1.4
         with:
