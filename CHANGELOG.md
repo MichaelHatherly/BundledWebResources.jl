@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- The package extension's trigger, `Revise`, now has a compat bound of 3. It
+  had none, so the extension could load against any release. Julia 1.6 to
+  1.8 accept a compat entry for a package outside `[deps]` only when `[extras]`
+  lists it, so `Revise` is listed there too.
+
 ## [v2.0.2] - 2026-05-29
 
 ### Changed
