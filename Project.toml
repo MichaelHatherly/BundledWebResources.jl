@@ -23,7 +23,7 @@ BundledWebResourcesReviseExt = "Revise"
 
 [compat]
 Artifacts = "1.6"
-Dates = "1.6"
+Dates = "<0.0.1, 1.6"
 Downloads = "1"
 HTTP = "1, 2"
 MIMEs = "0.1"
